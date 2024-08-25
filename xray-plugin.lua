@@ -175,6 +175,33 @@ local function define_class_with_inheritance(module, text, diff)
     return diff
 end
 
+---@param module string
+---@param diff diff[]
+---@return diff[]
+function define_module_function(module, diff)
+    diff[#diff+1] = {
+        text = string.format("local function define_%s_module()\n", module),
+        start  = 1,
+        finish = 0,
+    }
+
+    return diff
+end
+
+---@param module string
+---@param diff diff[]
+---@param text string
+---@return diff[]
+function export_module(module, text, diff)
+    diff[#diff+1] = {
+        text = string.format("\nend\n%s = define_%s_module()", module, module),
+        start = text:len() + 1,
+        finish = text:len(),
+    }
+
+    return diff
+end
+
 ---@class diff
 ---@field start  integer # The number of bytes at the beginning of the replacement
 ---@field finish integer # The number of bytes at the end of the replacement
@@ -196,11 +223,13 @@ function OnSetText(uri, text)
 
     local diffs = {}
 
+    diffs = define_module_function(file_name, diffs);
     diffs = file_as_global(file_name, text, diffs)
     diffs = define_globals_in_module(file_name, text, diffs)
     diffs = define_functions_in_module(file_name, text, diffs)
     diffs = define_class(file_name, text, diffs)
     diffs = define_class_with_inheritance(file_name, text, diffs)
+    diffs = export_module(file_name, text, diffs);
 
     return diffs
 end
